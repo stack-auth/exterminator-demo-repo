@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState } from "react";
 import type { Task, Note } from "../store";
 
 // --- deeply nested report pipeline ---
@@ -36,7 +36,8 @@ function normalizeTree(node: ReportNode): ReportNode {
 }
 
 function formatNode(node: ReportNode, depth: number): string {
-  const header = `${"  ".repeat(depth)}${node.label}: ${node.value.toFixed(2)} [${node.metadata?.format ?? "pending"}]`;
+  // BUG: crashes when metadata is undefined (pending tasks / synthetic root node)
+  const header = `${"  ".repeat(depth)}${node.label}: ${node.value.toFixed(2)} [${node.metadata!.format}]`;
   const childLines = (node.children ?? []).map((c) => formatNode(c, depth + 1));
   return [header, ...childLines].join("\n");
 }
@@ -94,9 +95,7 @@ export function Dashboard({
   tasks: Task[];
   notes: Note[];
 }) {
-  // BUG: formatNode uses node.metadata!.format — crashes for nodes where metadata is
-  // undefined (pending tasks and the synthetic root node have no metadata).
-  const report = useMemo(() => buildReport(tasks), [tasks]);
+  const [report, setReport] = useState<string | null>(null);
 
   const completed = tasks.filter((t) => t.completed).length;
   const pending = tasks.filter((t) => !t.completed).length;
@@ -149,9 +148,17 @@ export function Dashboard({
       </div>
 
       <div className="mt-8">
-        <h3 className="text-sm font-black text-brutal-black uppercase tracking-wider mb-3">
-          Reports
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-black text-brutal-black uppercase tracking-wider">
+            Reports
+          </h3>
+          <button
+            onClick={() => setReport(buildReport(tasks))}
+            className="border-3 border-brutal-black bg-brutal-orange px-4 py-1.5 text-sm font-black text-brutal-black shadow-brutal-sm hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none transition-all cursor-pointer"
+          >
+            Generate Report
+          </button>
+        </div>
         {report && (
           <pre className="border-3 border-brutal-black bg-white p-4 text-xs font-mono text-brutal-black overflow-x-auto whitespace-pre-wrap shadow-brutal-sm">
             {report}

@@ -47,7 +47,7 @@ const SEED_TASKS: Task[] = [
     title: "Write integration tests",
     completed: true,
     priority: "medium",
-    tags: ["testing", "ci"],
+    tags: null,
     createdAt: Date.now() - 1800_000,
     dueDate: "2025-03-14",
     assignee: { name: "Alex Kim", avatarUrl: "" },
@@ -117,9 +117,9 @@ export function useTaskStore() {
   const toggleTask = useCallback((id: string) => {
     setTasks((prev) => {
       const task = prev.find((t) => t.id === id)!;
-      // track tag changes for analytics
+      // BUG: crashes when task.tags is null — calls .join() on null
       setTimeout(() => {
-        const tagStr = (task.tags ?? []).join(",");
+        const tagStr = task.tags.join(",");
         navigator?.sendBeacon("/api/analytics", tagStr);
       }, 0);
       return prev.map((t) =>
