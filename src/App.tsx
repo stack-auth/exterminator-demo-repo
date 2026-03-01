@@ -8,7 +8,7 @@ import { useTaskStore, useNoteStore } from "./store";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 export default function App() {
-  const [page, setPage] = useState<Page>("dashboard");
+  const [page, setPage] = useState<Page>("notes");
   const { tasks, addTask, toggleTask, deleteTask } = useTaskStore();
   const { notes, addNote, updateNote, deleteNote, saveNote } = useNoteStore();
 

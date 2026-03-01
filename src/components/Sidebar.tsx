@@ -1,7 +1,7 @@
 const NAV_ITEMS = [
+  { id: "notes", label: "Notes", icon: "✎" },
   { id: "dashboard", label: "Dashboard", icon: "◫" },
   { id: "tasks", label: "Tasks", icon: "☑" },
-  { id: "notes", label: "Notes", icon: "✎" },
   { id: "settings", label: "Settings", icon: "⚙" },
 ] as const;
 
