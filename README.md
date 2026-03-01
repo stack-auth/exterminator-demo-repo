@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# Exterminator Demo App
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript task management app used to demo the **Exterminator** bug-fix pipeline — an AI agent that automatically reproduces, fixes, and validates browser errors.
 
-Currently, two official plugins are available:
+## The Bug
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The app ships with an intentional bug. On the **Tasks** page, clicking **Export CSV** crashes with:
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+TypeError: Cannot read properties of null (reading 'join')
+    at exportToCSV (Tasks.tsx:14)
+    at HTMLButtonElement.onClick (Tasks.tsx:57)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+**Root cause:** One task (`Migrate legacy user records`) was imported from a legacy system with `tags: null`. The `exportToCSV` function calls `task.tags.join(", ")` without a null check.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+**Fix:** `task.tags.join(", ")` → `(task.tags ?? []).join(", ")`
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Running the app
+
+**Prerequisites:** Node.js 18+, and either `npm`, `pnpm`, or `yarn`.
+
+```bash
+# Install dependencies
+pnpm install   # or: npm install
+
+# Start the dev server (defaults to http://localhost:5173)
+pnpm dev       # or: npm run dev
 ```
+
+To run on a specific port (e.g. 3001, as used by the Exterminator pipeline):
+
+```bash
+pnpm dev --port 3001
+```
+
+## Reproducing the bug
+
+1. Open the app in your browser
+2. Click **Tasks** in the sidebar
+3. Click **Export CSV**
+4. The app crashes with a red error screen — `TypeError: Cannot read properties of null (reading 'join')`
+
+## Using with Exterminator
+
+The Exterminator pipeline takes a stack trace + the running app URL and automatically:
+1. **Reproduces** the error using a browser agent
+2. **Fixes** the source code using an AI coding agent
+3. **Validates** the fix by re-running the reproduction steps
+
+To point the pipeline at this app, initialize a run context from `ai/runner/`:
+
+```python
+from context import PipelineContext
+
+ctx = PipelineContext.create(
+    stack_trace="""TypeError: Cannot read properties of null (reading 'join')
+    at exportToCSV (Tasks.tsx:14:16)
+    at HTMLButtonElement.onClick (Tasks.tsx:57:32)""",
+    source_dir="/path/to/this/repo/src",
+    app_url="http://localhost:3001",
+    app_description="React task management app. Clicking Export CSV on the Tasks page crashes because one task has tags: null.",
+)
+print(ctx.run_id)
+```
+
+Then run each step:
+
+```bash
+python run_browser_agent.py reproduce --run-id <id>
+python run_fix.py --run-id <id>
+python run_browser_agent.py validate --run-id <id>
+```
+
+See [`ai/runner/SETUP.md`](https://github.com/stack-auth/exterminator/blob/main/ai/runner/SETUP.md) in the main repo for full setup instructions.
