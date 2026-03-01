@@ -36,7 +36,7 @@ function normalizeTree(node: ReportNode): ReportNode {
 }
 
 function formatNode(node: ReportNode, depth: number): string {
-  const header = `${"  ".repeat(depth)}${node.label}: ${node.value.toFixed(2)} [${node.metadata!.format}]`;
+  const header = `${"  ".repeat(depth)}${node.label}: ${node.value.toFixed(2)}${node.metadata ? ` [${node.metadata.format}]` : ""}`;
   const childLines = (node.children ?? []).map((c) => formatNode(c, depth + 1));
   return [header, ...childLines].join("\n");
 }
